@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: classMethods.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T23:27:38-05:00
+* @Last modified time: 2017-03-02T23:51:07-05:00
 * @License: MIT
 */
 
@@ -25,7 +25,26 @@ using namespace std;
 bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
   this->number = accountNumber;
   this->balance = initBalance;
-  bool mutexStatus = pthread_mutex_init(&mutex, NULL);
+
+  // Attribute for mutex
+  bool mutexAttrStatus = pthread_mutexattr_init(&this->attr);
+  if(mutexAttrStatus != 0){
+    print_output("Mutex Attribute init failed: "\
+    << "Acc: " << accountNumber << " , "\
+    << "Balance: " << initBalance);
+    exit(1);
+  }
+  // Allow mutex to be shared among processes
+  bool mutexSharedStatus = pthread_mutexattr_setpshared(&this->attr, \
+    PTHREAD_PROCESS_SHARED);
+  if(mutexSharedStatus != 0){
+    print_output("Mutex PTHREAD_PROCESS_SHARED Attribute init failed: "\
+    << "Acc: " << accountNumber << " , "\
+    << "Balance: " << initBalance);
+    exit(1);
+  }
+  // Init mutex with specified attributes
+  bool mutexStatus = pthread_mutex_init(&this->mutex, &this->attr);
   if(mutexStatus != 0){
     print_output("Mutex init failed: "\
     << "Acc: " << accountNumber << " , "\
@@ -40,28 +59,26 @@ bankAccount :: bankAccount() {}
 // Destructor
 bankAccount :: ~bankAccount(){
   // Cleanup
-  if(pthread_mutex_unlock(&mutex) != 0){
-    dbg_trace("Already Unlocked!");
-  }
-  pthread_mutex_destroy(&mutex);
+  pthread_mutexattr_destroy(&this->attr);
+  pthread_mutex_destroy(&this->mutex);
 }
 
 // locks the account access
 int64_t bankAccount :: lock(){
   // lock mutex
-  return pthread_mutex_lock(&mutex);
+  return pthread_mutex_lock(&this->mutex);
 }
 
 // try to lock the account access; returns otherwise
 int64_t bankAccount :: trylock(){
   // try to lock mutex
-  return pthread_mutex_trylock(&mutex);
+  return pthread_mutex_trylock(&this->mutex);
 }
 
 // releases the account access to the account
 int64_t bankAccount :: unlock(){
   // unlock mutex
-  return pthread_mutex_unlock(&mutex);
+  return pthread_mutex_unlock(&this->mutex);
 }
 
 // retrieves account balance
@@ -87,15 +104,16 @@ void bankAccount :: setBalance(int64_t newBalance){
 // Constructor
 workerQueue :: workerQueue(){
   this->workerID = -1;
-  this->shouldExit = 0;
+  this->shouldExit = false;
 
-  bool semStatus = sem_init(&this->goodToRead, 0, 0);   // Init sem to 0
+  // Process shared
+  bool semStatus = sem_init(&this->goodToRead, 1, 0);   // Init sem to 0
   if(semStatus != 0){
     print_output("Sem init failed! Worker ID: " << workerID);
     exit(1);
   }
-
-  bool mutexStatus = sem_init(&this->mutex, 0, 1);     // Init sem to 1
+  // Process shared
+  bool mutexStatus = sem_init(&this->mutex, 1, 1);     // Init sem to 1
   if(mutexStatus != 0){
     print_output("Sem init failed! Worker ID: " << workerID);
     exit(1);
@@ -124,11 +142,11 @@ void workerQueue :: requestToExit()
 {
   sem_wait(&this->mutex);
   // -- CRITICAL Start
-    if(this->shouldExit == 1){
+    if(this->shouldExit == true){
       sem_post(&this->mutex);
       return;
     }
-    this->shouldExit = 1;
+    this->shouldExit = true;
     sem_post(&this->goodToRead);              // Indicate that worker should terminate
   // -- CRITICAL End
   sem_post(&this->mutex);
@@ -157,7 +175,7 @@ EFTRequest_t* workerQueue :: popRequest()
   sem_wait(&this->mutex);
   // -- CRITICAL Start
     sem_getvalue(&this->goodToRead, &value);
-    if(value == 0 && this->shouldExit == 1){
+    if(value == 0 && this->shouldExit == true){
       sem_post(&this->mutex);
       return NULL;
     }

@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T23:22:38-05:00
+* @Last modified time: 2017-03-02T23:58:33-05:00
 * @License: MIT
 */
 
@@ -32,6 +32,7 @@ typedef class bankAccount
 private:
   int64_t number;     // Account Number
   int64_t balance;    // Balance
+  pthread_mutexattr_t attr; // Attribute for mutex
   pthread_mutex_t mutex;    // Mutexcle to protect read/write access to the acc
 
 public:
@@ -59,10 +60,10 @@ typedef class workerQueue
 {
 private:
   int64_t workerID;
-  std::queue<EFTRequest_t*> Queue;
-  int shouldExit;
+  std::queue<EFTRequest_t*> Queue;          // Queue to hold jobs
+  bool shouldExit;                          // flag to indicate termination
   sem_t goodToRead;                         // Sem to indicate worker to proceed
-  sem_t mutex;
+  sem_t mutex;                              // mutex to protect the queue access
 
 public:
   workerQueue();                            // Constructor
