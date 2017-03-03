@@ -3,7 +3,7 @@
 # @Email:  izharits@gmail.com
 # @Filename: Makefile
 # @Last modified by:   izhar
-# @Last modified time: 2017-03-03T00:19:24-05:00
+# @Last modified time: 2017-03-03T17:13:30-05:00
 # @License: MIT
 
 
@@ -14,7 +14,7 @@ CC = g++
 HEADERS = -I.
 CFLAGS = -Wall -Werror -std=c++11 -pthread -O2
 #DEBUG_FLAGS = -g -DDEBUG
-SOURCES = transfProg.cpp classMethods.cpp processThreads.cpp
+SOURCES = transfProg.cpp bankAccount.cpp workerQueue.cpp processThreads.cpp
 
 all: clean $(TARGETS)
 

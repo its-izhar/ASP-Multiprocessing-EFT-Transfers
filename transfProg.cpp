@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T03:41:36-05:00
+* @Last modified time: 2017-03-03T17:21:12-05:00
 * @License: MIT
 */
 
@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
 #include <cstring>
 #include <stdlib.h>
 #include <pthread.h>
@@ -23,12 +24,12 @@
 #include "transfProg.hpp"
 
 
+// Std namespace
 using namespace std;
 
 // Global
 // To save the order in which accounts are listed
 std::vector<int64_t> accountList;
-
 
 /* Parse the input file into bank account pool and EFT requests pool */
 static int64_t assignWorkers(const char *fileName, threadData_t *threadData, \
