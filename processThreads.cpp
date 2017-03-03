@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: processThreads.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T18:52:16-05:00
+* @Last modified time: 2017-03-02T23:33:53-05:00
 * @License: MIT
 */
 
@@ -44,13 +44,6 @@ static void *EFTWorker(void *data)
     << "From: " << fromAccount << " , "\
     << "To: " << toAccount << " , "\
     << "Transfer: " << transferAmount);*/
-
-    // See if it is the last job
-    if(fromAccount == -1 || toAccount == -1){
-      delete requestToProcess;
-      requestToProcess = NULL;
-      break;
-    }
 
     // -- Process the request with "restricted order" of accounts to avoid deadlocks
     // ========== ENTER Critical Section ==========
@@ -96,7 +89,7 @@ static void *EFTWorker(void *data)
     delete requestToProcess;
     requestToProcess = NULL;
   }
-  dbg_trace("THREAD: " << workerData->threadID << " EXIT!");
+  // dbg_trace("THREAD: " << workerData->threadID << " EXIT!");
   pthread_exit(NULL);
 }
 
@@ -134,24 +127,14 @@ int64_t spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
 void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
    int64_t NumberOfThreads, int64_t lastAssignedID)
 {
-  int64_t fromAccount = -1, toAccount = -1, transferAmount = 0;
   int64_t assignID = lastAssignedID;
   int64_t requestCount = 0;
-
-  // the last job
-  fromAccount = -1;
-  toAccount = -1;
-  transferAmount = 0;
 
   // Sanity checks
   if(lastAssignedID == -1 || NumberOfThreads < 0){
     return;
   }
 
-  // This loop is added to give each worker a last job which will have
-  // both the from and to account numbers as -1 and the transferAmount 0
-  // The logic works irrespective of the number of threads and requests,
-  // as well as who was the last worker that got assigned the job
   do {
       // Calculate worker ID to be assigned
       // Since we will be assigning the jobs in round robin fashion,
@@ -163,24 +146,14 @@ void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
       assert(threadData[assignID].threadID \
         == threadData[assignID].EFTRequests.getWorkerID());
 
-      // Create new EFT request
-      EFTRequest_t* newRequest = new EFTRequest_t();
-      newRequest->workerID = assignID;
-      newRequest->fromAccount = fromAccount;
-      newRequest->toAccount = toAccount;
-      newRequest->transferAmount = transferAmount;
-
-      // Start writing;
-      // NOTE:: this is data-race safe since the workerQueue class implements
-      // race safe mechanism to write and read from worker queue using semaphores
-      threadData[assignID].EFTRequests.pushRequest(newRequest);
+      // Request to terminate
+      threadData[assignID].EFTRequests.requestToExit();
 
       /*dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
       << "Job Assigned ID: " << assignID << ","\
-      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
-      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");*/
+      << "Queue ID: " << threadData[assignID].EFTRequests.getWorkerID() << "]");*/
 
   } while(assignID != lastAssignedID);
 
-  // dbg_trace("Total Last Jobs: " << requestCount);
+  dbg_trace("Total Threads Requested to Exit: " << requestCount);
 }

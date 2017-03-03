@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T18:52:10-05:00
+* @Last modified time: 2017-03-02T23:22:38-05:00
 * @License: MIT
 */
 
@@ -60,8 +60,9 @@ typedef class workerQueue
 private:
   int64_t workerID;
   std::queue<EFTRequest_t*> Queue;
+  int shouldExit;
   sem_t goodToRead;                         // Sem to indicate worker to proceed
-  sem_t mutex;                              // Mutex for rw sync
+  sem_t mutex;
 
 public:
   workerQueue();                            // Constructor
@@ -70,6 +71,7 @@ public:
   void setWorkerID(int64_t ID);                 // sets worker ID
   void pushRequest(EFTRequest_t *request);  // Adds the item from the the back
   EFTRequest_t *popRequest();               // removes the item from the front
+  void requestToExit();                     // request the worker to terminate
 } workerQueue_t;
 
 // Typedefs

@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T18:52:04-05:00
+* @Last modified time: 2017-03-02T23:33:42-05:00
 * @License: MIT
 */
 
@@ -117,8 +117,7 @@ static int64_t assignWorkers(const char *fileName, threadData_t *threadData, \
 
       /*dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
       << "Job Assigned ID: " << assignID << ","\
-      << "Queue ID: " << threadData[assignID].EFTRequests->getWorkerID() << ","\
-      << "Queue Size: " << threadData[assignID].EFTRequests->size() << "]");*/
+      << "Queue ID: " << threadData[assignID].EFTRequests.getWorkerID() << "]")*/
     }
 
 CLEAR:
@@ -221,6 +220,7 @@ int main(int argc, char const *argv[])
   // wait for threads to finish
   for(int64_t i=0; i<workerThreads; i++){
     pthread_join(threads[i], NULL);
+    dbg_trace("THREAD: " << i << " TERMINATED!");
   }
 
   // Display the Accounts and their Balances after transfer

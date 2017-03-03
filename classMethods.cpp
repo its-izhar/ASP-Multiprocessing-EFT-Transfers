@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: classMethods.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T18:52:29-05:00
+* @Last modified time: 2017-03-02T23:27:38-05:00
 * @License: MIT
 */
 
@@ -87,16 +87,17 @@ void bankAccount :: setBalance(int64_t newBalance){
 // Constructor
 workerQueue :: workerQueue(){
   this->workerID = -1;
+  this->shouldExit = 0;
 
-  bool semStatus = sem_init(&goodToRead, 0, 0);   // Init sem to 0
+  bool semStatus = sem_init(&this->goodToRead, 0, 0);   // Init sem to 0
   if(semStatus != 0){
     print_output("Sem init failed! Worker ID: " << workerID);
     exit(1);
   }
 
-  bool mutexStatus = sem_init(&mutex, 0, 1);   // Init mutex to 1
+  bool mutexStatus = sem_init(&this->mutex, 0, 1);     // Init sem to 1
   if(mutexStatus != 0){
-    print_output("Mutex init failed! Worker ID: " << workerID);
+    print_output("Sem init failed! Worker ID: " << workerID);
     exit(1);
   }
 }
@@ -118,11 +119,28 @@ void workerQueue :: setWorkerID(int64_t ID){
   this->workerID = ID;
 }
 
+// Requests the worker to terminate
+void workerQueue :: requestToExit()
+{
+  sem_wait(&this->mutex);
+  // -- CRITICAL Start
+    if(this->shouldExit == 1){
+      sem_post(&this->mutex);
+      return;
+    }
+    this->shouldExit = 1;
+    sem_post(&this->goodToRead);              // Indicate that worker should terminate
+  // -- CRITICAL End
+  sem_post(&this->mutex);
+}
+
 // Adds a new request at the from the back of the queue
 void workerQueue :: pushRequest(EFTRequest_t* newRequest)
 {
   sem_wait(&this->mutex);
-  this->Queue.push(newRequest);             // Add new request to the queue
+    // -- CRITICAL Start
+    this->Queue.push(newRequest);             // Add new request to the queue
+    // -- CRITICAL End
   sem_post(&this->mutex);
   sem_post(&this->goodToRead);              // Indicate that the request can be read
 }
@@ -131,13 +149,21 @@ void workerQueue :: pushRequest(EFTRequest_t* newRequest)
 EFTRequest_t* workerQueue :: popRequest()
 {
   EFTRequest_t *request = NULL;
+  int value = -1;
   // if we are not goodToRead, the we will be blocked
   // If we are goodToRead, then decrement the current sem value
   // to Indicate that we will read and read the value
   sem_wait(&this->goodToRead);
   sem_wait(&this->mutex);
-  request = this->Queue.front();
-  this->Queue.pop();
+  // -- CRITICAL Start
+    sem_getvalue(&this->goodToRead, &value);
+    if(value == 0 && this->shouldExit == 1){
+      sem_post(&this->mutex);
+      return NULL;
+    }
+    request = this->Queue.front();
+    this->Queue.pop();
+  // -- CRITICAL End
   sem_post(&this->mutex);
   return request;
 }
