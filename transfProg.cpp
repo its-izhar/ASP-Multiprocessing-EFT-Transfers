@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T23:33:42-05:00
+* @Last modified time: 2017-03-03T03:41:36-05:00
 * @License: MIT
 */
 
@@ -104,16 +104,16 @@ static int64_t assignWorkers(const char *fileName, threadData_t *threadData, \
         == threadData[assignID].EFTRequests.getWorkerID());
 
       // Create new EFT request
-      EFTRequest_t* newRequest = new EFTRequest_t();
-      newRequest->workerID = assignID;
-      newRequest->fromAccount = fromAccount;
-      newRequest->toAccount = toAccount;
-      newRequest->transferAmount = transferAmount;
+      EFTRequest_t newRequest;
+      newRequest.workerID = assignID;
+      newRequest.fromAccount = fromAccount;
+      newRequest.toAccount = toAccount;
+      newRequest.transferAmount = transferAmount;
 
       // Start writing;
       // NOTE:: this is data-race safe since the workerQueue class implements
       // safe IPC using mutex and condition varibales
-      threadData[assignID].EFTRequests.pushRequest(newRequest);
+      threadData[assignID].EFTRequests.pushRequest(&newRequest);
 
       /*dbg_trace("[Thread ID: " << threadData[assignID].threadID << ","\
       << "Job Assigned ID: " << assignID << ","\

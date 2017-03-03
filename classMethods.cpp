@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: classMethods.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T23:51:07-05:00
+* @Last modified time: 2017-03-03T03:49:40-05:00
 * @License: MIT
 */
 
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <string.h>
 #include <sys/time.h>
 #include "debugMacros.hpp"
 #include "transfProg.hpp"
@@ -54,7 +55,30 @@ bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
 }
 
 // Default Constructor
-bankAccount :: bankAccount() {}
+bankAccount :: bankAccount() {
+  this->number = -1;
+  this->balance = -1;
+
+  // Attribute for mutex
+  bool mutexAttrStatus = pthread_mutexattr_init(&this->attr);
+  if(mutexAttrStatus != 0){
+    print_output("Mutex Attribute init failed!");
+    exit(1);
+  }
+  // Allow mutex to be shared among processes
+  bool mutexSharedStatus = pthread_mutexattr_setpshared(&this->attr, \
+    PTHREAD_PROCESS_SHARED);
+  if(mutexSharedStatus != 0){
+    print_output("Mutex PTHREAD_PROCESS_SHARED Attribute init failed!");
+    exit(1);
+  }
+  // Init mutex with specified attributes
+  bool mutexStatus = pthread_mutex_init(&this->mutex, &this->attr);
+  if(mutexStatus != 0){
+    print_output("Mutex init failed!");
+    exit(1);
+  }
+}
 
 // Destructor
 bankAccount :: ~bankAccount(){
@@ -106,8 +130,20 @@ workerQueue :: workerQueue(){
   this->workerID = -1;
   this->shouldExit = false;
 
+  // Setup buffer
+  this->buffer.in = 0;
+  this->buffer.out = 0;
+  this->buffer.capacity = MAX_WORKER_BUFFERSIZE;
+  memset(this->buffer.items, 0, sizeof(this->buffer.items));
+
   // Process shared
-  bool semStatus = sem_init(&this->goodToRead, 1, 0);   // Init sem to 0
+  bool semStatus = sem_init(&this->items, 1, 0);   // Init "items" sem to 0
+  if(semStatus != 0){
+    print_output("Sem init failed! Worker ID: " << workerID);
+    exit(1);
+  }
+  // Init "spaces" sem to size of the buffer
+  semStatus = sem_init(&this->spaces, 1, this->buffer.capacity);
   if(semStatus != 0){
     print_output("Sem init failed! Worker ID: " << workerID);
     exit(1);
@@ -124,7 +160,8 @@ workerQueue :: workerQueue(){
 workerQueue :: ~workerQueue(){
   // Cleanup
   sem_destroy(&this->mutex);
-  sem_destroy(&this->goodToRead);
+  sem_destroy(&this->items);
+  sem_destroy(&this->spaces);
 }
 
 // retrieves workerQueue ID
@@ -147,41 +184,53 @@ void workerQueue :: requestToExit()
       return;
     }
     this->shouldExit = true;
-    sem_post(&this->goodToRead);              // Indicate that worker should terminate
+    sem_post(&this->items);              // Indicate that worker should terminate
   // -- CRITICAL End
   sem_post(&this->mutex);
 }
 
 // Adds a new request at the from the back of the queue
-void workerQueue :: pushRequest(EFTRequest_t* newRequest)
+void workerQueue :: pushRequest(EFTRequest_t *newRequest)
 {
+  sem_wait(&this->spaces);              // Indicate we we want to occupy a space
+
+  // -- CRITICAL Start
   sem_wait(&this->mutex);
-    // -- CRITICAL Start
-    this->Queue.push(newRequest);             // Add new request to the queue
-    // -- CRITICAL End
+    // Add new request to the queue
+    memset(&this->buffer.items[this->buffer.in], 0, sizeof(EFTRequest_t));
+    memcpy(&this->buffer.items[this->buffer.in], newRequest, sizeof(EFTRequest_t));
+    // Increment buffer index
+    this->buffer.in = (this->buffer.in + 1) % this->buffer.capacity;
   sem_post(&this->mutex);
-  sem_post(&this->goodToRead);              // Indicate that the request can be read
+
+  // -- CRITICAL End
+  sem_post(&this->items);              // Indicate that the request can be read
 }
 
 // Removes the request from the front of the queue
-EFTRequest_t* workerQueue :: popRequest()
+EFTRequest_t workerQueue :: popRequest()
 {
-  EFTRequest_t *request = NULL;
+  EFTRequest_t request = { -1, -1, -1, -1};
   int value = -1;
-  // if we are not goodToRead, the we will be blocked
-  // If we are goodToRead, then decrement the current sem value
-  // to Indicate that we will read and read the value
-  sem_wait(&this->goodToRead);
-  sem_wait(&this->mutex);
+  // if there are 0 items, then we will be blocked
+  // else we will decrement the current no. of items
+  // to Indicate that we will read it
+  sem_wait(&this->items);
+
   // -- CRITICAL Start
-    sem_getvalue(&this->goodToRead, &value);
+  sem_wait(&this->mutex);
+    sem_getvalue(&this->items, &value);
     if(value == 0 && this->shouldExit == true){
       sem_post(&this->mutex);
-      return NULL;
+      return request;
     }
-    request = this->Queue.front();
-    this->Queue.pop();
-  // -- CRITICAL End
+    // Copy the request from buffer
+    memcpy(&request, &this->buffer.items[this->buffer.out], sizeof(EFTRequest_t));
+    this->buffer.out = (this->buffer.out + 1) % this->buffer.capacity;
   sem_post(&this->mutex);
+  // -- CRITICAL End
+
+  sem_post(&this->spaces);        // Indicate that a space has been emptied after reading
+
   return request;
 }

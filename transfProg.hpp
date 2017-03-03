@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T23:58:33-05:00
+* @Last modified time: 2017-03-03T03:51:07-05:00
 * @License: MIT
 */
 
@@ -21,10 +21,9 @@
 #include <stdint.h>
 #include "debugMacros.hpp"
 
-
-#define           LINE_BUFFER             50
-#define           MAX_WORKERS             10000
-
+#define           LINE_BUFFER                   50
+#define           MAX_WORKERS                   10000
+#define           MAX_WORKER_BUFFERSIZE         16
 
 // Classes
 typedef class bankAccount
@@ -47,6 +46,7 @@ public:
   void setBalance(int64_t newBalance);  // sets account balance
 } bankAccount_t;
 
+
 // Item for work queue
 typedef struct EFTRequest {
   int64_t workerID;
@@ -55,29 +55,40 @@ typedef struct EFTRequest {
   int64_t transferAmount;
 } EFTRequest_t;
 
+// Buffer to hold EFTRequest_t
+typedef struct EFTRequestsBuffer {
+  int in;
+  int out;
+  int64_t capacity;
+  EFTRequest_t items[MAX_WORKER_BUFFERSIZE];
+} Buffer_t;
+
 // FIFO queue for each worker
 typedef class workerQueue
 {
 private:
   int64_t workerID;
-  std::queue<EFTRequest_t*> Queue;          // Queue to hold jobs
-  bool shouldExit;                          // flag to indicate termination
-  sem_t goodToRead;                         // Sem to indicate worker to proceed
+  sem_t spaces;                             // Sem to indicate no. of present empty spaces
+  sem_t items;                              // Sem to indicate no. of present items
   sem_t mutex;                              // mutex to protect the queue access
+  bool shouldExit;                          // flag to indicate termination
+  Buffer_t buffer;                  // worker queue to hold EFT Requests
 
 public:
   workerQueue();                            // Constructor
   ~workerQueue();                           // Destructor
-  int64_t getWorkerID();                        // retrieves the worker ID
-  void setWorkerID(int64_t ID);                 // sets worker ID
+  int64_t getWorkerID();                    // retrieves the worker ID
+  void setWorkerID(int64_t ID);             // sets worker ID
   void pushRequest(EFTRequest_t *request);  // Adds the item from the the back
-  EFTRequest_t *popRequest();               // removes the item from the front
+  EFTRequest_t popRequest();                // removes the item from the front
   void requestToExit();                     // request the worker to terminate
 } workerQueue_t;
+
 
 // Typedefs
 typedef std::map<int64_t, bankAccount_t> bankAccountPool_t;
 typedef bankAccountPool_t::iterator bankAccountIterator_t;
+
 
 // Thread Data
 typedef struct threadData {

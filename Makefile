@@ -3,7 +3,7 @@
 # @Email:  izharits@gmail.com
 # @Filename: Makefile
 # @Last modified by:   izhar
-# @Last modified time: 2017-03-02T23:21:34-05:00
+# @Last modified time: 2017-03-03T00:19:24-05:00
 # @License: MIT
 
 
@@ -12,8 +12,8 @@
 TARGETS = transfProg
 CC = g++
 HEADERS = -I.
-CFLAGS = -Wall -Werror -std=c++11 -pthread -Og
-DEBUG_FLAGS = -g -DDEBUG
+CFLAGS = -Wall -Werror -std=c++11 -pthread -O2
+#DEBUG_FLAGS = -g -DDEBUG
 SOURCES = transfProg.cpp classMethods.cpp processThreads.cpp
 
 all: clean $(TARGETS)

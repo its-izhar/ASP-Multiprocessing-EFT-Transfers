@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: processThreads.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-02T23:33:53-05:00
+* @Last modified time: 2017-03-03T03:40:57-05:00
 * @License: MIT
 */
 
@@ -26,20 +26,29 @@ using namespace std;
 static void *EFTWorker(void *data)
 {
   threadData_t *workerData = (threadData_t *) data;
-  EFTRequest_t *requestToProcess = NULL;
+  EFTRequest_t requestToProcess;
 
-  while((requestToProcess = workerData->EFTRequests.popRequest()) != NULL)
+  /*dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
+  << "Queue-ID: " << workerData->EFTRequests.getWorkerID() << " , "\
+  << "Queue-size: " << workerData->EFTRequests->size() << " , "\
+  << "Account Pool: " << workerData->accountPool->size());*/
+
+  while(1)
   {
-    /*dbg_trace("[Thread-ID: " << workerData->threadID << "]: "\
-    << "Queue-ID: " << workerData->EFTRequests->getWorkerID() << " , "\
-    << "Queue-size: " << workerData->EFTRequests->size() << " , "\
-    << "Account Pool: " << workerData->accountPool->size());*/
+    // Read data from worker queue/buffer
+    // This has been implemented in an atomic way with the use of
+    // synchronization constructs
+    requestToProcess = workerData->EFTRequests.popRequest();
 
     int64_t fromBalance = 0, toBalance = 0;
-    int64_t fromAccount = requestToProcess->fromAccount;
-    int64_t toAccount = requestToProcess->toAccount;
-    int64_t transferAmount = requestToProcess->transferAmount;
+    int64_t fromAccount = requestToProcess.fromAccount;
+    int64_t toAccount = requestToProcess.toAccount;
+    int64_t transferAmount = requestToProcess.transferAmount;
 
+    // Check if we are done
+    if(fromAccount == -1 || toAccount == -1){
+      break;
+    }
     /*dbg_trace("[requestToProcess]: "\
     << "From: " << fromAccount << " , "\
     << "To: " << toAccount << " , "\
@@ -84,10 +93,6 @@ static void *EFTWorker(void *data)
         workerData->accountPool->at(toAccount).unlock();
       }
     // ========= EXIT Critical Section =========
-
-    // Cleanup
-    delete requestToProcess;
-    requestToProcess = NULL;
   }
   // dbg_trace("THREAD: " << workerData->threadID << " EXIT!");
   pthread_exit(NULL);
