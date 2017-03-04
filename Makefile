@@ -3,7 +3,7 @@
 # @Email:  izharits@gmail.com
 # @Filename: Makefile
 # @Last modified by:   izhar
-# @Last modified time: 2017-03-03T17:13:30-05:00
+# @Last modified time: 2017-03-04T18:47:02-05:00
 # @License: MIT
 
 
@@ -12,9 +12,9 @@
 TARGETS = transfProg
 CC = g++
 HEADERS = -I.
-CFLAGS = -Wall -Werror -std=c++11 -pthread -O2
-#DEBUG_FLAGS = -g -DDEBUG
-SOURCES = transfProg.cpp bankAccount.cpp workerQueue.cpp processThreads.cpp
+CFLAGS = -Wall -Werror -std=c++11 -pthread -Og
+DEBUG_FLAGS = -g -DDEBUG
+SOURCES = transfProg.cpp bankAccount.cpp workerQueue.cpp processThreads.cpp bankAccountPool.cpp
 
 all: clean $(TARGETS)
 

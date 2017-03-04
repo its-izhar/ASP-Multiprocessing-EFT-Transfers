@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T17:21:12-05:00
+* @Last modified time: 2017-03-04T18:49:45-05:00
 * @License: MIT
 */
 
@@ -56,6 +56,23 @@ static int64_t assignWorkers(const char *fileName, threadData_t *threadData, \
   {
     fileStream.getline(line, LINE_BUFFER);          // read a line
     dbg_trace("String: " << line);
+
+    // TODO:: Testing
+    static bool poolInitDone = false;
+    if(poolInitDone == false){
+      poolInitDone = true;
+      // InitPoolSpace here
+      int64_t maxAccounts = atoi(line);
+      if(maxAccounts < 1){
+        dbg_trace("Error! First line should be max number of accounts");
+        exit(1);
+      }
+      accountPool.initPool(maxAccounts);
+      // clear and repeat the sequence
+      dbg_trace("*** POOL INIT DONE! THIS SHOULD NEVER PRINT AGAIN!!! ****");
+      goto CLEAR;
+    }
+
     // Check if the transfer requests are coming
     if (isalpha(line[0]) && line[0]=='T' ){
       initDone = true;
@@ -76,13 +93,12 @@ static int64_t assignWorkers(const char *fileName, threadData_t *threadData, \
       // Keep the order of the accounts
       accountList.push_back(accountNumber);
       // Adding the object to the map here
-      accountPool.emplace(std::make_pair(accountNumber, \
-        bankAccount(accountNumber, initBalance)));
+      accountPool.addAccount(accountNumber, initBalance);
 
       dbg_trace("POOL: \
-      Account Number: " << accountPool[accountNumber].getAccountNumber() \
+      Account Number: " << accountPool.at(accountNumber)->getAccountNumber() \
       << " , " << \
-      "Init Balance: " << accountPool[accountNumber].getBalance());
+      "Init Balance: " << accountPool.at(accountNumber)->getBalance());
     }
     else
     {
@@ -149,20 +165,12 @@ CLEAR:
 }
 
 
-#if 0
 /* display account pool */
 static void displayAccountPool(bankAccountPool_t &accountPool)
 {
-  bankAccountIterator_t i;
-  for(i = accountPool.begin(); i != accountPool.end(); ++i)
-  {
-    dbg_trace("POOL:\
-    Account Number: " << i->second.getAccountNumber() \
-    << " , " << \
-    "Balance: " << i->second.getBalance());
-  }
+  accountPool.dbgPrintAccountPool();
 }
-#endif
+
 
 /* Print the account and their balances to stdout */
 static void printAccounts(bankAccountPool_t &accountPool)
@@ -170,7 +178,7 @@ static void printAccounts(bankAccountPool_t &accountPool)
   std::vector<int64_t>::iterator i;
   for(i = accountList.begin(); i != accountList.end(); ++i)
   {
-    print_output(*i << " " << accountPool[*i].getBalance());
+    print_output(*i << " " << accountPool.at((int64_t)*i)->getBalance());
   }
 }
 
@@ -225,6 +233,7 @@ int main(int argc, char const *argv[])
   }
 
   // Display the Accounts and their Balances after transfer
+  displayAccountPool(accountPool);
   printAccounts(accountPool);
 
   return 0;

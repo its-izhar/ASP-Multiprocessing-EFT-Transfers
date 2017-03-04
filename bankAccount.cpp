@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: bankAccount.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T16:56:10-05:00
+* @Last modified time: 2017-03-03T20:13:57-05:00
 * @License: MIT
 */
 
@@ -25,7 +25,7 @@ using namespace std;
 
 // ------------------------ Class: bankAccount ------------------------------
 // Constructor
-bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
+/*bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
   this->number = accountNumber;
   this->balance = initBalance;
 
@@ -54,7 +54,7 @@ bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
     << "Balance: " << initBalance);
     exit(1);
   }
-}
+}*/
 
 // Default Constructor
 bankAccount :: bankAccount() {
@@ -119,8 +119,14 @@ int64_t bankAccount :: getAccountNumber(){
   return this->number;
 }
 
-// Destructor
+// sets the balance of the acount
 void bankAccount :: setBalance(int64_t newBalance){
   // update the balance
   this->balance = newBalance;
+}
+
+// sets the balance of the acount
+void bankAccount :: setAccountNumber(int64_t accountNumber){
+  // update the account number
+  this->number = accountNumber;
 }

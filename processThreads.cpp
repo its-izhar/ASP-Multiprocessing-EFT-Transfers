@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: processThreads.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T03:40:57-05:00
+* @Last modified time: 2017-03-04T14:23:16-05:00
 * @License: MIT
 */
 
@@ -58,39 +58,39 @@ static void *EFTWorker(void *data)
     // ========== ENTER Critical Section ==========
       if(fromAccount < toAccount)
       { // 1. From, 2. To
-        workerData->accountPool->at(fromAccount).lock();
-        workerData->accountPool->at(toAccount).lock();
+        workerData->accountPool->at(fromAccount)->lock();
+        workerData->accountPool->at(toAccount)->lock();
       }
       else
       { // 1. To, 2. From
-        workerData->accountPool->at(toAccount).lock();
-        workerData->accountPool->at(fromAccount).lock();
+        workerData->accountPool->at(toAccount)->lock();
+        workerData->accountPool->at(fromAccount)->lock();
       }
         // -- Get the balance
-        fromBalance = workerData->accountPool->at(fromAccount).getBalance();
-        toBalance = workerData->accountPool->at(toAccount).getBalance();
+        fromBalance = workerData->accountPool->at(fromAccount)->getBalance();
+        toBalance = workerData->accountPool->at(toAccount)->getBalance();
 
         /*dbg_trace("[beforeProcess]: "\
         << "From: " << fromBalance << " , "\
         << "To: " << toBalance);*/
 
         // -- Update the account with new balance
-        workerData->accountPool->at(fromAccount).setBalance(fromBalance - transferAmount);
-        workerData->accountPool->at(toAccount).setBalance(toBalance + transferAmount);
+        workerData->accountPool->at(fromAccount)->setBalance(fromBalance - transferAmount);
+        workerData->accountPool->at(toAccount)->setBalance(toBalance + transferAmount);
 
         /*dbg_trace("[AfterProcess]: "\
-        << "From: " << workerData->accountPool->at(fromAccount).getBalance() << " , "\
-        << "To: " << workerData->accountPool->at(toAccount).getBalance());*/
+        << "From: " << workerData->accountPool->at(fromAccount)->getBalance() << " , "\
+        << "To: " << workerData->accountPool->at(toAccount)->getBalance());*/
 
       if(fromAccount < toAccount)
       { // 1. To, 2. From
-        workerData->accountPool->at(toAccount).unlock();
-        workerData->accountPool->at(fromAccount).unlock();
+        workerData->accountPool->at(toAccount)->unlock();
+        workerData->accountPool->at(fromAccount)->unlock();
       }
       else
       { // 1. From, 2. To
-        workerData->accountPool->at(fromAccount).unlock();
-        workerData->accountPool->at(toAccount).unlock();
+        workerData->accountPool->at(fromAccount)->unlock();
+        workerData->accountPool->at(toAccount)->unlock();
       }
     // ========= EXIT Critical Section =========
   }
