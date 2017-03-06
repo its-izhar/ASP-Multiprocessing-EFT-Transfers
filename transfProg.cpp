@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-06T05:24:35-05:00
+* @Last modified time: 2017-03-06T13:01:32-05:00
 * @License: MIT
 */
 
@@ -220,29 +220,31 @@ int main(int argc, char const *argv[])
             MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   if(sAccontPool == MAP_FAILED){
     print_output("(main()) PID: " << getpid() << " , " \
-      "Failed to map the memory for bankAccountPool! Exiting!");
+      "Failed to map the memory for bankAccountPool! *ABORT*");
     exit(1);
   }
   // Pool of bank accounts
   bankAccountPool_t *accountPool = (bankAccountPool_t *) sAccontPool;
 
   // map processData memory here
-  void *sProcessData[workerProcesses];
+  void *sProcessData = mmap(NULL, sizeof(processData_t) * workerProcesses, \
+            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  if(sProcessData == MAP_FAILED){
+    print_output("(main()) PID: " << getpid() << " , " \
+    "Failed to map the memory for processData! *ABORT*");
+    exit(1);
+  }
+
+  // Pool of processData_t maintained by main()
+  // this is needed because main will assign jobs to all EFTWorkers
   processData_t *processData[workerProcesses];
 
-  for(int i = 0; i < workerProcesses; i++)
-  {
-    sProcessData[i] = mmap(NULL, sizeof(processData_t), \
-    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  // Extract handles for each processData_t
+  processData_t *sHandle = (processData_t *) sProcessData;
 
-    if(sProcessData[i] == MAP_FAILED){
-      print_output("(main()) PID: " << getpid() << " , " \
-      "Failed to map the memory for processData: " << i << " *ABORT*");
-      exit(1);
-    }
-
-    // Assign it to our processDataPool
-    processData[i] = (processData_t *) sProcessData[i];
+  // Assign it to our processDataPool
+  for(int i = 0; i < workerProcesses; i++, sHandle++) {
+    processData[i] = sHandle;
   }
 
   // Keep the EFT Transfer Request count
@@ -259,7 +261,7 @@ int main(int argc, char const *argv[])
 
   // wait for processes to finish
   int pStatus = 0;
-  for(int64_t i=0; i<workerProcesses; i++)
+  for(int i = 0; i < workerProcesses; i++)
   {
     wait(&pStatus);
     if(WIFEXITED(pStatus)){
@@ -284,16 +286,12 @@ int main(int argc, char const *argv[])
   if(ustatus != 0){
     print_output("(main()) PID: " << getpid() << " , " \
                  "Failed to unmap the accountPool memory! Exiting!");
-    exit(1);
   }
 
-  for(int i = 0; i < workerProcesses; i++){
-    ustatus = munmap(processData[i], sizeof(processData_t));
-    if(ustatus != 0){
-      print_output("(main()) PID: " << getpid() << " , " \
-      "Failed to unmap the processData: " << i << " memory! Exiting!");
-      exit(1);
-    }
+  ustatus = munmap(sProcessData, sizeof(processData_t) * workerProcesses);
+  if(ustatus != 0){
+    print_output("(main()) PID: " << getpid() << " , " \
+    "Failed to unmap the processData memory! Exiting!");
   }
 
   return 0;
