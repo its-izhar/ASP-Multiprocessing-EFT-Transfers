@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-04T03:16:02-05:00
+* @Last modified time: 2017-03-06T01:56:00-05:00
 * @License: MIT
 */
 
@@ -30,9 +30,9 @@ typedef struct threadData {
 } threadData_t;
 
 // Functions for threads processing
-int64_t spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
+int64_t spawnThreads(threadData_t **threadDataPool, \
   bankAccountPool_t *accountPool, int64_t NumberOfThreads);
-void askThreadsToExit(threadData_t *threadData, bankAccountPool_t &accountPool,\
-   int64_t NumberOfThreads, int64_t lastAssignedID);
+void askThreadsToExit(threadData_t **threadData, int64_t NumberOfThreads, \
+  int64_t lastAssignedID);
 
 #endif

@@ -4,13 +4,16 @@
 * @Email:  izharits@gmail.com
 * @Filename: workerQueue.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T20:14:14-05:00
+* @Last modified time: 2017-03-06T04:51:07-05:00
 * @License: MIT
 */
 
 
 
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "debugMacros.hpp"
 #include "transfProg.hpp"
 #include "workerQueue.hpp"
@@ -20,8 +23,15 @@
 using namespace std;
 
 // ------------------------ Class: workerQueue ------------------------------
+
 // Constructor
-workerQueue :: workerQueue(){
+void workerQueue :: init()
+{
+  if(this->is_initialized == true){
+    return;
+  }
+  this->is_initialized = true;
+
   this->workerID = -1;
   this->shouldExit = false;
 
@@ -52,7 +62,13 @@ workerQueue :: workerQueue(){
 }
 
 // Destructor
-workerQueue :: ~workerQueue(){
+void workerQueue :: destroy()
+{
+  if(this->is_initialized == false){
+    return;
+  }
+  this->is_initialized = false;
+
   // Cleanup
   sem_destroy(&this->mutex);
   sem_destroy(&this->items);

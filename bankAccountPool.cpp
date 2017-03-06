@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: bankAccountPool.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-05T23:46:41-05:00
+* @Last modified time: 2017-03-06T04:50:27-05:00
 * @License: MIT
 */
 
@@ -76,6 +76,7 @@ static node_t* getNewNode(int64_t accountNumber, int64_t accountBalance)
   newNode->height = 1;
   newNode->left = NULL;
   newNode->right = NULL;
+  newNode->account.init();
   newNode->account.setAccountNumber(accountNumber);
   newNode->account.setBalance(accountBalance);
 
@@ -225,6 +226,18 @@ static node_t* getNode(node_t *node, int64_t key)
   }
 }
 
+
+// Postorder
+void destroyAccountPool(node_t *node)
+{
+  if(node == NULL){
+    return;
+  }
+  destroyAccountPool(node->left);
+  destroyAccountPool(node->right);
+  node->account.destroy();
+}
+
 #ifdef DEBUG_TEST
 // Prints account pool (Inorder)
 void printAccountPool(node_t *node)
@@ -240,19 +253,27 @@ void printAccountPool(node_t *node)
 #endif
 
 // --------- bankAccountPool --------
-bankAccountPool :: bankAccountPool()
-{
-  this->handle = NULL;
-  this->poolMemory = NULL;
-  this->poolSize = 0;
-  this->totalAccounts = 0;
-}
+// bankAccountPool :: bankAccountPool()
+// {
+//   // TODO:: Remove
+//   print_output("**Current PID: " << getpid());
+//
+//   this->handle = NULL;
+//   this->poolMemory = NULL;
+//   this->poolSize = 0;
+//   this->totalAccounts = 0;
+// }
 
 void bankAccountPool :: initPool(int64_t NumberOfAccounts)
 {
   if( is_initialized == true ){
     return;
   }
+  this->handle = NULL;
+  this->poolMemory = NULL;
+  this->poolSize = 0;
+  this->totalAccounts = 0;
+
   // mmap or malloc the memory here;
   // this will be shared among processess
   // this->poolMemory = malloc(NumberOfAccounts * sizeof(node_t));
@@ -270,8 +291,11 @@ void bankAccountPool :: initPool(int64_t NumberOfAccounts)
   initPoolSpace(poolMemory, NumberOfAccounts);
 }
 
-bankAccountPool :: ~bankAccountPool()
+void bankAccountPool :: deInitPool()
 {
+  // destroy account pool first
+  destroyAccountPool(this->handle);
+
   // unmap the accountPool shared memory
   // free(this->poolMemory);
   int status = munmap(this->poolMemory, this->poolSize);

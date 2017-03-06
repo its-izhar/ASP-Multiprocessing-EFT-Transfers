@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: bankAccount.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T20:13:57-05:00
+* @Last modified time: 2017-03-06T04:50:12-05:00
 * @License: MIT
 */
 
@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "debugMacros.hpp"
 #include "transfProg.hpp"
@@ -24,40 +26,15 @@
 using namespace std;
 
 // ------------------------ Class: bankAccount ------------------------------
-// Constructor
-/*bankAccount :: bankAccount(int64_t accountNumber, int64_t initBalance){
-  this->number = accountNumber;
-  this->balance = initBalance;
-
-  // Attribute for mutex
-  bool mutexAttrStatus = pthread_mutexattr_init(&this->attr);
-  if(mutexAttrStatus != 0){
-    print_output("Mutex Attribute init failed: "\
-    << "Acc: " << accountNumber << " , "\
-    << "Balance: " << initBalance);
-    exit(1);
-  }
-  // Allow mutex to be shared among processes
-  bool mutexSharedStatus = pthread_mutexattr_setpshared(&this->attr, \
-    PTHREAD_PROCESS_SHARED);
-  if(mutexSharedStatus != 0){
-    print_output("Mutex PTHREAD_PROCESS_SHARED Attribute init failed: "\
-    << "Acc: " << accountNumber << " , "\
-    << "Balance: " << initBalance);
-    exit(1);
-  }
-  // Init mutex with specified attributes
-  bool mutexStatus = pthread_mutex_init(&this->mutex, &this->attr);
-  if(mutexStatus != 0){
-    print_output("Mutex init failed: "\
-    << "Acc: " << accountNumber << " , "\
-    << "Balance: " << initBalance);
-    exit(1);
-  }
-}*/
 
 // Default Constructor
-bankAccount :: bankAccount() {
+void bankAccount :: init()
+{
+  if(this->is_initialized == true){
+    return;
+  }
+  this->is_initialized = true;
+
   this->number = -1;
   this->balance = -1;
 
@@ -83,8 +60,13 @@ bankAccount :: bankAccount() {
 }
 
 // Destructor
-bankAccount :: ~bankAccount(){
+void bankAccount :: destroy(){
   // Cleanup
+  if(this->is_initialized == false){
+    return;
+  }
+  this->is_initialized = false;
+
   pthread_mutexattr_destroy(&this->attr);
   pthread_mutex_destroy(&this->mutex);
 }

@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: bankAccount.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-05T23:34:57-05:00
+* @Last modified time: 2017-03-06T04:15:28-05:00
 * @License: MIT
 */
 
@@ -31,10 +31,11 @@ private:
   int64_t balance;    // Balance
   pthread_mutexattr_t attr; // Attribute for mutex
   pthread_mutex_t mutex;    // Mutexcle to protect read/write access to the acc
+  bool is_initialized = false;     // flag for init
 
 public:
-  bankAccount();                    // Default Constructor
-  ~bankAccount();                   // Destructor
+  void init();                    // Initialize
+  void destroy();                 // Destroy
   int64_t lock();                                   // Lock the access to mutex
   int64_t trylock();                                // Lock the access to mutex
   int64_t unlock();                                 // releases the access to mutex
@@ -55,9 +56,8 @@ private:
   int64_t totalAccounts;
 
 public:
-  bankAccountPool();
-  ~bankAccountPool();
   void initPool(int64_t NumberOfAccounts);                    // Initialized the pool
+  void deInitPool();                                          // Destroy the pool
   poolHandle_t getPoolHandle();                               // get the handle to the pool
   int64_t getTotalAccounts();                                 // Total accounts in the pool
   bankAccount_t* at(int64_t accountNumber);                   // retrieve bank account

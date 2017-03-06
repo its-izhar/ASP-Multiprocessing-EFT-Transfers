@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: workerQueue.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-03T17:04:46-05:00
+* @Last modified time: 2017-03-06T04:16:15-05:00
 * @License: MIT
 */
 
@@ -53,10 +53,11 @@ private:
   sem_t mutex;                              // mutex to protect the queue access
   bool shouldExit;                          // flag to indicate termination
   Buffer_t buffer;                  // worker queue to hold EFT Requests
+  bool is_initialized = false;
 
 public:
-  workerQueue();                            // Constructor
-  ~workerQueue();                           // Destructor
+  void init();                            // Constructor
+  void destroy();                           // Destructor
   int64_t getWorkerID();                    // retrieves the worker ID
   void setWorkerID(int64_t ID);             // sets worker ID
   void pushRequest(EFTRequest_t *request);  // Adds the item from the the back
