@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-06T05:02:31-05:00
+* @Last modified time: 2017-03-06T05:24:35-05:00
 * @License: MIT
 */
 
@@ -34,8 +34,8 @@ using namespace std;
 std::vector<int64_t> accountList;
 
 /* Parse the input file into bank account pool and EFT requests pool */
-static int64_t assignWorkers(const char *fileName, threadData_t **threadData, \
-  bankAccountPool_t *accountPool, int64_t NumberOfThreads, int64_t &requestCount)
+static int64_t assignWorkers(const char *fileName, processData_t **processData, \
+  bankAccountPool_t *accountPool, int64_t NumberOfProcesses, int64_t &requestCount)
 {
   // Input file stream & buffer
   std::ifstream fileStream;
@@ -72,9 +72,9 @@ static int64_t assignWorkers(const char *fileName, threadData_t **threadData, \
       accountPool->initPool(maxAccounts);
 
       // Spawn processes
-      bool status = spawnThreads(threadData, accountPool, NumberOfThreads);
+      bool status = spawnProcesses(processData, accountPool, NumberOfProcesses);
       if(status == FAIL){
-        dbg_trace("Failed to create threads!");
+        dbg_trace("Failed to create processs!");
         return 0;
       }
       // clear and repeat the sequence
@@ -122,12 +122,12 @@ static int64_t assignWorkers(const char *fileName, threadData_t **threadData, \
       }
 
       // Assign the job to next worker
-      assignID = (assignID + 1) % NumberOfThreads;
+      assignID = (assignID + 1) % NumberOfProcesses;
       ++requestCount;
 
-      assert(threadData[assignID]->threadID == assignID);    // Sanity checks
-      assert(threadData[assignID]->threadID \
-        == threadData[assignID]->EFTRequests.getWorkerID());
+      assert(processData[assignID]->processID == assignID);    // Sanity checks
+      assert(processData[assignID]->processID \
+        == processData[assignID]->EFTRequests.getWorkerID());
 
       // Create new EFT request
       EFTRequest_t newRequest;
@@ -139,11 +139,11 @@ static int64_t assignWorkers(const char *fileName, threadData_t **threadData, \
       // Start writing;
       // NOTE:: this is data-race safe since the workerQueue class implements
       // safe IPC using mutex and condition varibales
-      threadData[assignID]->EFTRequests.pushRequest(&newRequest);
+      processData[assignID]->EFTRequests.pushRequest(&newRequest);
 
-      /*dbg_trace("[Thread ID: " << threadData[assignID]->threadID << ","\
+      /*dbg_trace("[Thread ID: " << processData[assignID]->processID << ","\
       << "Job Assigned ID: " << assignID << ","\
-      << "Queue ID: " << threadData[assignID]->EFTRequests.getWorkerID() << "]");*/
+      << "Queue ID: " << processData[assignID]->EFTRequests.getWorkerID() << "]");*/
     }
 
 CLEAR:
@@ -159,8 +159,8 @@ CLEAR:
   {
     dbg_trace("Reached End-of-File!");
     dbg_trace("Total Transfer Requests: " << requestCount);
-    // Ask all threads to terminate
-    askThreadsToExit(threadData, NumberOfThreads, assignID);
+    // Ask all processs to terminate
+    askProcessesToExit(processData, NumberOfProcesses, assignID);
   }
   else {
     dbg_trace("Error while reading!");
@@ -197,7 +197,7 @@ int main(int argc, char const *argv[])
   // Check and parse the command line argument
   if(argc != 3){
     print_output("USAGE:");
-    print_output("\t./transfProg <PathToInputFile> <NumberOfThreads>");
+    print_output("\t./transfProg <PathToInputFile> <NumberOfProcesses>");
     return 0;
   }
   // Check the validity of the input file,
@@ -207,10 +207,10 @@ int main(int argc, char const *argv[])
     print_output("Please check the path to the input file is correct.");
     return 0;
   }
-  // Check the validity of the worker threads
-  int64_t workerThreads = atoi((const char *) argv[2]);
-  if(workerThreads < 1 || workerThreads > MAX_WORKERS){
-    print_output("Invalid number of workers: " << workerThreads \
+  // Check the validity of the worker processs
+  int64_t workerProcesses = atoi((const char *) argv[2]);
+  if(workerProcesses < 1 || workerProcesses > MAX_WORKERS){
+    print_output("Invalid number of workers: " << workerProcesses \
      << "\nEnter buffer size between 1 to " << MAX_WORKERS);
     return 0;
   }
@@ -227,12 +227,12 @@ int main(int argc, char const *argv[])
   bankAccountPool_t *accountPool = (bankAccountPool_t *) sAccontPool;
 
   // map processData memory here
-  void *sProcessData[workerThreads];
-  threadData_t *threadData[workerThreads];
+  void *sProcessData[workerProcesses];
+  processData_t *processData[workerProcesses];
 
-  for(int i = 0; i < workerThreads; i++)
+  for(int i = 0; i < workerProcesses; i++)
   {
-    sProcessData[i] = mmap(NULL, sizeof(threadData_t), \
+    sProcessData[i] = mmap(NULL, sizeof(processData_t), \
     PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
     if(sProcessData[i] == MAP_FAILED){
@@ -241,25 +241,25 @@ int main(int argc, char const *argv[])
       exit(1);
     }
 
-    // Assign it to our threadDataPool
-    threadData[i] = (threadData_t *) sProcessData[i];
+    // Assign it to our processDataPool
+    processData[i] = (processData_t *) sProcessData[i];
   }
 
   // Keep the EFT Transfer Request count
   int64_t EFTRequestsCount = 0;
 
   // And parse the file
-  int64_t parseStatus = assignWorkers(argv[1], threadData, accountPool, \
-    workerThreads, EFTRequestsCount);
+  int64_t parseStatus = assignWorkers(argv[1], processData, accountPool, \
+    workerProcesses, EFTRequestsCount);
   if(parseStatus == FAIL)
   {
     print_output("ERROR: Failed during parsing!");
     return 0;
   }
 
-  // wait for threads to finish
+  // wait for processes to finish
   int pStatus = 0;
-  for(int64_t i=0; i<workerThreads; i++)
+  for(int64_t i=0; i<workerProcesses; i++)
   {
     wait(&pStatus);
     if(WIFEXITED(pStatus)){
@@ -269,7 +269,7 @@ int main(int argc, char const *argv[])
       dbg_trace("Error! PROCESS: " << i << " Terminaton not successful!");
     }
     // free up the worker resources
-    threadData[i]->EFTRequests.destroy();
+    processData[i]->EFTRequests.destroy();
   }
 
   // Display the Accounts and their Balances after transfer
@@ -287,11 +287,11 @@ int main(int argc, char const *argv[])
     exit(1);
   }
 
-  for(int i = 0; i < workerThreads; i++){
-    ustatus = munmap(threadData[i], sizeof(threadData_t));
+  for(int i = 0; i < workerProcesses; i++){
+    ustatus = munmap(processData[i], sizeof(processData_t));
     if(ustatus != 0){
       print_output("(main()) PID: " << getpid() << " , " \
-      "Failed to unmap the threadData: " << i << " memory! Exiting!");
+      "Failed to unmap the processData: " << i << " memory! Exiting!");
       exit(1);
     }
   }

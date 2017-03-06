@@ -1,10 +1,10 @@
 /**
 * @Author: Izhar Shaikh <izhar>
-* @Date:   2017-03-02T18:51:43-05:00
+* @Date:   2017-03-06T05:32:14-05:00
 * @Email:  izharits@gmail.com
-* @Filename: processThreads.cpp
+* @Filename: manageProcesses.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-06T05:00:18-05:00
+* @Last modified time: 2017-03-06T05:35:44-05:00
 * @License: MIT
 */
 
@@ -24,15 +24,15 @@
 using namespace std;
 
 
-// Thread function (EFT requests processor)
-void EFTWorker(threadData_t *data)
+// Worker function (EFT requests processing in a forked child process)
+void EFTWorker(processData_t *data)
 {
-  threadData_t *workerData = data;
+  processData_t *workerData = data;
   EFTRequest_t requestToProcess;
 
   dbg_trace("PID: " << getpid() << " , " << "PPID: " << getppid() << " , " \
-  << "After Spawning: threadData[" << workerData->threadID << "]: " << workerData << " , "\
-  << "[Thread-ID: " << workerData->threadID << "]: "\
+  << "After Spawning: processData[" << workerData->processID << "]: " << workerData << " , "\
+  << "[Processe-ID: " << workerData->processID << "]: "\
   << "Queue-ID: " << workerData->EFTRequests.getWorkerID());
 
   // workerData->accountPool->dbgPrintAccountPool();
@@ -98,79 +98,79 @@ void EFTWorker(threadData_t *data)
       }
     // ========= EXIT Critical Section =========
   }
-  dbg_trace("PROCESS: " << workerData->threadID << " - " << getpid() << " EXIT!");
+  dbg_trace("PROCESS: " << workerData->processID << " - " << getpid() << " EXIT!");
   return;
 }
 
 
-// Function to create thread data and spawn threads
-int64_t spawnThreads(threadData_t **threadDataPool, \
-  bankAccountPool_t *accountPool, int64_t NumberOfThreads)
+// Function to create process data and spawn processes
+int64_t spawnProcesses(processData_t **processDataPool, \
+  bankAccountPool_t *accountPool, int64_t NumberOfProcesses)
 {
-  threadData_t **threadPool = threadDataPool;
-  bool spawnThreadsStatus = FAIL;
-  int64_t thread = 0;
+  processData_t **processPool = processDataPool;
+  bool spawnProcessesStatus = FAIL;
+  int64_t process = 0;
 
-  for(thread = 0; thread < NumberOfThreads; thread++)
+  for(process = 0; process < NumberOfProcesses; process++)
   {
-    threadPool[thread]->threadID = thread;
-    threadPool[thread]->EFTRequests.init();
-    threadPool[thread]->EFTRequests.setWorkerID(thread);
-    threadPool[thread]->accountPool = accountPool;
+    processPool[process]->processID = process;
+    processPool[process]->EFTRequests.init();
+    processPool[process]->EFTRequests.setWorkerID(process);
+    processPool[process]->accountPool = accountPool;
 
     // Spwan it
     int64_t status = fork();
     if(status < 0){
-      print_output("Failed to create process: " << thread);
+      print_output("Failed to create process: " << process);
       exit(1);
     }
     else if(status == 0)        // Child process
     {
       // Execute worker
-      EFTWorker(threadPool[thread]);
+      EFTWorker(processPool[process]);
 
       // unmap the memory here
-      munmap(threadPool[thread]->accountPool, sizeof(bankAccountPool_t));
-      munmap(threadPool[thread], sizeof(threadData_t));
+      munmap(processPool[process]->accountPool, sizeof(bankAccountPool_t));
+      munmap(processPool[process], sizeof(processData_t));
 
       // exit from child
       exit(EXIT_SUCCESS);
     }
   }
-  if(thread == NumberOfThreads){
-    spawnThreadsStatus = SUCCESS;
+  if(process == NumberOfProcesses){
+    spawnProcessesStatus = SUCCESS;
   }
-  return spawnThreadsStatus;
+  return spawnProcessesStatus;
 }
 
 
 
-// Ask threads to terminate
-void askThreadsToExit(threadData_t **threadData, int64_t NumberOfThreads, \
+// Ask processes to terminate
+void askProcessesToExit(processData_t **processData, int64_t NumberOfProcesses, \
   int64_t lastAssignedID)
 {
   int64_t assignID = lastAssignedID;
   int64_t requestCount = 0;
 
   // Sanity checks
-  if(lastAssignedID == -1 || NumberOfThreads < 0){
+  if(lastAssignedID == -1 || NumberOfProcesses < 0){
     return;
   }
 
   do {
       // Calculate worker ID to be assigned
       // Since we will be assigning the jobs in round robin fashion,
-      // we will mod the result with NumberOfThreads
-      assignID = (assignID + 1) % NumberOfThreads;
+      // we will mod the result with NumberOfProcesses
+      assignID = (assignID + 1) % NumberOfProcesses;
       ++requestCount;
 
-      assert(threadData[assignID]->threadID == assignID);    // Sanity checks
-      assert(threadData[assignID]->threadID \
-        == threadData[assignID]->EFTRequests.getWorkerID());
+      assert(processData[assignID]->processID == assignID);    // Sanity checks
+      assert(processData[assignID]->processID \
+        == processData[assignID]->EFTRequests.getWorkerID());
 
       // Request to terminate
-      threadData[assignID]->EFTRequests.requestToExit();
+      processData[assignID]->EFTRequests.requestToExit();
   } while(assignID != lastAssignedID);
 
-  dbg_trace("Total Threads Requested to Exit: " << requestCount);
+  dbg_trace("Total Processes Requested to Exit: " << requestCount);
 }
