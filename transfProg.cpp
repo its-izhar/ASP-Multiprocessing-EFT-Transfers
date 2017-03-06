@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: transfProg.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-04T18:49:45-05:00
+* @Last modified time: 2017-03-04T20:11:47-05:00
 * @License: MIT
 */
 
@@ -178,7 +178,7 @@ static void printAccounts(bankAccountPool_t &accountPool)
   std::vector<int64_t>::iterator i;
   for(i = accountList.begin(); i != accountList.end(); ++i)
   {
-    print_output(*i << " " << accountPool.at((int64_t)*i)->getBalance());
+    print_output(*i << " " << accountPool.at((int64_t)(*i))->getBalance());
   }
 }
 

@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: processThreads.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-04T14:23:16-05:00
+* @Last modified time: 2017-03-05T23:13:15-05:00
 * @License: MIT
 */
 
@@ -114,7 +114,8 @@ int64_t spawnThreads(pthread_t *threads, threadData_t *threadDataPool, \
     threadPool[thread].EFTRequests.setWorkerID(thread);
     threadPool[thread].accountPool = accountPool;
     // Spwan it
-    int64_t status = pthread_create(&threadID[thread], NULL, &EFTWorker, (void*) &threadPool[thread]);
+    int64_t status = pthread_create(&threadID[thread], NULL, &EFTWorker, \
+      (void*) &threadPool[thread]);
     if(status != 0){
       print_output("Failed to create thread: " << thread);
       exit(1);

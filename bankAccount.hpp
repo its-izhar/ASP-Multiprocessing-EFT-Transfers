@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: bankAccount.hpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-04T18:39:18-05:00
+* @Last modified time: 2017-03-05T23:34:57-05:00
 * @License: MIT
 */
 
@@ -51,6 +51,7 @@ class bankAccountPool
 private:
   poolHandle_t handle;
   void *poolMemory;
+  size_t poolSize;
   int64_t totalAccounts;
 
 public:

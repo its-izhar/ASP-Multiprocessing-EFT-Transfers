@@ -4,7 +4,7 @@
 * @Email:  izharits@gmail.com
 * @Filename: bankAccountPool.cpp
 * @Last modified by:   izhar
-* @Last modified time: 2017-03-04T18:47:47-05:00
+* @Last modified time: 2017-03-05T23:46:41-05:00
 * @License: MIT
 */
 
@@ -14,6 +14,9 @@
 #include "debugMacros.hpp"
 #include <stdbool.h>
 #include <assert.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
 
 using namespace std;
 
@@ -241,6 +244,7 @@ bankAccountPool :: bankAccountPool()
 {
   this->handle = NULL;
   this->poolMemory = NULL;
+  this->poolSize = 0;
   this->totalAccounts = 0;
 }
 
@@ -251,13 +255,32 @@ void bankAccountPool :: initPool(int64_t NumberOfAccounts)
   }
   // mmap or malloc the memory here;
   // this will be shared among processess
-  this->poolMemory = malloc(NumberOfAccounts * sizeof(node_t));
+  // this->poolMemory = malloc(NumberOfAccounts * sizeof(node_t));
+  this->poolSize = NumberOfAccounts * sizeof(node_t);
+  this->poolMemory = mmap(NULL, this->poolSize, \
+        PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  if(this->poolMemory == MAP_FAILED){
+    print_output("PPID: " << getppid() << " , " \
+                 "PID: " << getpid() << " , " \
+      "Failed to map the memory for bankAccountPool! Exiting!");
+    exit(1);
+  }
+  // Initialize the pool space now so our accountPool nodes will be allocated
+  // memory from this space
   initPoolSpace(poolMemory, NumberOfAccounts);
 }
 
 bankAccountPool :: ~bankAccountPool()
 {
-  free(this->poolMemory);
+  // unmap the accountPool shared memory
+  // free(this->poolMemory);
+  int status = munmap(this->poolMemory, this->poolSize);
+  if(status != 0){
+    print_output("PPID: " << getppid() << " , " \
+                 "PID: " << getpid() << " , " \
+                 "Failed to unmap the accountPool memory! Exiting!");
+    exit(1);
+  }
 }
 
 // retrieves current handle to the bankAccountPool
